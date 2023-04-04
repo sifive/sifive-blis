@@ -71,14 +71,6 @@ void bli_gks_init( void )
 		// Register a context for each architecture that was #define'd in
 		// bli_config.h.
 
-		// -- SiFive architectures ----------------------------------------------
-
-#ifdef BLIS_CONFIG_SIFIVE_X280
-		bli_gks_register_cntx( BLIS_ARCH_SIFIVE_X280, bli_cntx_init_sifive_x280,
-		                                              bli_cntx_init_sifive_x280_ref,
-		                                              bli_cntx_init_sifive_x280_ind );
-#endif
-                
 		// -- Intel architectures ----------------------------------------------
 
 #ifdef BLIS_CONFIG_SKX
@@ -221,6 +213,14 @@ void bli_gks_init( void )
 		bli_gks_register_cntx( BLIS_ARCH_BGQ,         bli_cntx_init_bgq,
 		                                              bli_cntx_init_bgq_ref,
 		                                              bli_cntx_init_bgq_ind );
+#endif
+
+		// -- SiFive architectures ----------------------------------------------
+
+#ifdef BLIS_CONFIG_SIFIVE_X280
+		bli_gks_register_cntx( BLIS_ARCH_SIFIVE_X280, bli_cntx_init_sifive_x280,
+		                                              bli_cntx_init_sifive_x280_ref,
+		                                              bli_cntx_init_sifive_x280_ind );
 #endif
 
 		// -- Generic architectures --------------------------------------------
