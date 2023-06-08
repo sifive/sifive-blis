@@ -308,43 +308,43 @@ arch_t bli_arch_query_id_impl( void )
 // enum value given to the corresponding BLIS_ARCH_ value.
 static const char* config_name[ BLIS_NUM_ARCHS ] =
 {
-    "skx",
-    "knl",
-    "knc",
-    "haswell",
-    "sandybridge",
-    "penryn",
+	"skx",
+	"knl",
+	"knc",
+	"haswell",
+	"sandybridge",
+	"penryn",
 
-    "zen3",
-    "zen2",
-    "zen",
-    "excavator",
-    "steamroller",
-    "piledriver",
-    "bulldozer",
+	"zen3",
+	"zen2",
+	"zen",
+	"excavator",
+	"steamroller",
+	"piledriver",
+	"bulldozer",
 
-    "armsve",
-    "a64fx",
-    "firestorm",
-    "thunderx2",
-    "cortexa57",
-    "cortexa53",
-    "cortexa15",
-    "cortexa9",
+	"armsve",
+	"a64fx",
+	"firestorm",
+	"thunderx2",
+	"cortexa57",
+	"cortexa53",
+	"cortexa15",
+	"cortexa9",
 
-    "power10",
-    "power9",
-    "power7",
-    "bgq",
+	"power10",
+	"power9",
+	"power7",
+	"bgq",
 
-    "rv32i",
-    "rv64i",
-    "rv32iv",
-    "rv64iv",
+	"rv32i",
+	"rv64i",
+	"rv32iv",
+	"rv64iv",
 
-    "sifive_x280",
+	"sifive_x280",
 
-    "generic"
+	"generic"
 };
 
 const char* bli_arch_string( arch_t id )

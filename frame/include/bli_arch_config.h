@@ -374,7 +374,6 @@ CNTX_INIT_PROTS( generic )
 #include "bli_kernels_sifive_x280.h"
 #endif
 
-
 #ifdef BLIS_KERNELS_RVI
 #include "bli_kernels_rvi.h"
 #endif
