@@ -199,6 +199,19 @@ print_usage()
                  library. When disabled, this option also forces the use
                  of --disable-threading.
 
+   --enable-tls, --disable-tls
+
+                 Enable thread-local storage (TLS) for static variables
+                 in BLIS. The default state is enabled. However, like with
+                 --disable-system, there may be rare situations, such as
+                 when --disable-system is appropriate, where thread-local
+                 storage is unsupported by the compiler. In those cases,
+                 disabling TLS may be a suitable workaround.
+		         WARNING: DISABLING TLS IS DANGEROUS AND MAY CAUSE RACE
+                 CONDITIONS! Please try combining --disable-tls with
+                 --disable-threading if you suspect any correctness or
+                 deadlock issues.
+
    --disable-pba-pools, --enable-pba-pools
    --disable-sba-pools, --enable-sba-pools
 
@@ -1230,14 +1243,25 @@ auto_detect()
 	# NOTE: -D_GNU_SOURCE is needed to enable POSIX extensions to
 	# pthreads (i.e., barriers).
 
-	cmd="${cc} ${config_defines} \
+	cmd="${cc} \
 	      -DBLIS_CONFIGURETIME_CPUID \
 	      ${c_hdr_paths} \
 	      -std=c99 -D_GNU_SOURCE \
-	      ${cflags} \
-	      ${c_src_filepaths} \
-	      ${ldflags} \
-	      -o ${autodetect_x}"
+	      ${cflags}"
+
+	# Special case for RISC-V, whose architecture can be detected with
+	# preprocessor macros alone. This avoids having to run RISC-V binaries
+	# on a cross-compiler host. Returns "generic" if RISC-V not detected.
+	riscv_config=$(${cmd} -E "${dist_path}/frame/base/bli_riscv_cpuid.h" |
+	               grep '^[^#]')
+	if [[ $riscv_config != *generic* ]]; then
+		echo "${riscv_config}"
+		return
+	fi
+
+	# Finish command for building executable
+	cmd="${cmd} ${config_defines} ${c_src_filepaths} ${ldflags} \
+	     -o ${autodetect_x}"
 
 	if [ "${debug_auto_detect}" == "no" ]; then
 
@@ -1521,7 +1545,7 @@ get_compiler_version()
 	# The last part ({ read first rest ; echo $first ; }) is a workaround
 	# to OS X's egrep only returning the first match.
 	cc_vendor=$(echo "${vendor_string}" |
-	            grep -oE 'icc|gcc|clang|emcc|pnacl|IBM|oneAPI|crosstool-NG|GCC' |
+	            grep -oE 'icc|gcc|clang|nvc|emcc|pnacl|IBM|oneAPI|crosstool-NG|GCC' |
 	            { read -r first rest ; echo "${first}"; })
 
 	# AOCC version strings contain both "clang" and "AOCC" substrings, and
@@ -2512,6 +2536,9 @@ main()
 	# The system flag.
 	enable_system='yes'
 
+	# The thread-local storage flag.
+	enable_tls='yes'
+
 	# The threading flag.
 	threading_model='off'
 
@@ -2690,6 +2717,13 @@ main()
 							;;
 						disable-system)
 							enable_system='no'
+							;;
+
+						enable-tls)
+							enable_tls='yes'
+							;;
+						disable-tls)
+							enable_tls='no'
 							;;
 
 						enable-threading=*)
@@ -3543,11 +3577,23 @@ main()
 		enable_system_01=1
 	else
 		echo "${script_name}: disabling operating system support."
-		echo "${script_name}: WARNING: all threading will be disabled!"
+		echo "${script_name}: WARNING: disabling OS support forcibly disables all threading!"
 		enable_system_01=0
 
 		# Force threading to be disabled.
 		threading_model='off'
+	fi
+
+	# Check if we are building with or without thread-local storage support.
+	if [[ ${enable_tls} = yes ]]; then
+		echo "${script_name}: enabling thread-local storage (TLS) support."
+		enable_tls_01=1
+	else
+		echo "${script_name}: disabling thread-local storage (TLS) support."
+		echo "${script_name}: WARNING: THIS IS DANGEROUS! Disabling TLS may cause race conditions!"
+		echo "${script_name}: WARNING: Please try --disable-threading if you suspect any correctness"
+		echo "${script_name}: WARNING: or deadlock issues."
+		enable_tls_01=0
 	fi
 
 	# Check the threading model flag and standardize its value, if needed.
@@ -3991,7 +4037,7 @@ main()
 			# clutter.
 			# NOTE: This maybe should use merged stdout/stderr rather than only
 			# stdout. But it works for now.
-			vendor_string="$(${FC} --version 2>/dev/null || :)"
+			vendor_string="$(${found_fc} --version 2>/dev/null || :)"
 
 			# Query the compiler "vendor" (ie: the compiler's simple name).
 			# The last part ({ read first rest ; echo $first ; }) is a workaround
@@ -4202,6 +4248,7 @@ main()
 	| sed >"${bli_config_h_out_path}"                                    \
 	-e "s/@version@/${version_esc}/g"                                    \
 	-e "s/@enable_system@/${enable_system_01}/g"                         \
+	-e "s/@enable_tls@/${enable_tls_01}/g"                               \
 	-e "s/@enable_openmp@/${enable_openmp_01}/g"                         \
 	-e "s/@enable_openmp_as_def@/${enable_openmp_as_def_01}/g"           \
 	-e "s/@enable_pthreads@/${enable_pthreads_01}/g"                     \
