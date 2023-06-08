@@ -263,6 +263,20 @@ arch_t bli_arch_query_id_impl( void )
 		id = BLIS_ARCH_BGQ;
 		#endif
 
+		// RISC-V microarchitectures
+		#ifdef BLIS_FAMILY_RV32I
+		id = BLIS_ARCH_RV32I;
+		#endif
+		#ifdef BLIS_FAMILY_RV64I
+		id = BLIS_ARCH_RV64I;
+		#endif
+		#ifdef BLIS_FAMILY_RV32IV
+		id = BLIS_ARCH_RV32IV;
+		#endif
+		#ifdef BLIS_FAMILY_RV64IV
+		id = BLIS_ARCH_RV64IV;
+		#endif
+
 		// SiFive microarchitectures.
 		#ifdef BLIS_FAMILY_SIFIVE_X280
 		id = BLIS_ARCH_SIFIVE_X280;
@@ -294,38 +308,43 @@ arch_t bli_arch_query_id_impl( void )
 // enum value given to the corresponding BLIS_ARCH_ value.
 static const char* config_name[ BLIS_NUM_ARCHS ] =
 {
-    "skx",
-    "knl",
-    "knc",
-    "haswell",
-    "sandybridge",
-    "penryn",
+	"skx",
+	"knl",
+	"knc",
+	"haswell",
+	"sandybridge",
+	"penryn",
 
-    "zen3",
-    "zen2",
-    "zen",
-    "excavator",
-    "steamroller",
-    "piledriver",
-    "bulldozer",
+	"zen3",
+	"zen2",
+	"zen",
+	"excavator",
+	"steamroller",
+	"piledriver",
+	"bulldozer",
 
-    "armsve",
-    "a64fx",
-    "firestorm",
-    "thunderx2",
-    "cortexa57",
-    "cortexa53",
-    "cortexa15",
-    "cortexa9",
+	"armsve",
+	"a64fx",
+	"firestorm",
+	"thunderx2",
+	"cortexa57",
+	"cortexa53",
+	"cortexa15",
+	"cortexa9",
 
-    "power10",
-    "power9",
-    "power7",
-    "bgq",
+	"power10",
+	"power9",
+	"power7",
+	"bgq",
 
-    "sifive_x280",
+	"rv32i",
+	"rv64i",
+	"rv32iv",
+	"rv64iv",
 
-    "generic"
+	"sifive_x280",
+
+	"generic"
 };
 
 const char* bli_arch_string( arch_t id )
@@ -366,4 +385,3 @@ void bli_arch_log( const char* fmt, ... )
 		free( prefix_fmt );
 	}
 }
-
