@@ -38,7 +38,7 @@
 AXPBYV(PRECISION_CHAR, void)
 {
     // Computes y := beta * y + alpha * conjx(x)
-    
+
     if (n <= 0) return;
 
     const DATATYPE* restrict alpha = alpha_;
@@ -59,7 +59,7 @@ AXPBYV(PRECISION_CHAR, void)
         return;
     }
 
-    // Note: in the cases alpha = 0 && beta = 1, or alpha = 1 && beta = 0, we 
+    // Note: in the cases alpha = 0 && beta = 1, or alpha = 1 && beta = 0, we
     // will canonicalize NaNs whereas the reference code will propagate NaN payloads.
 
     // TO DO (optimization): special cases for alpha = +-1, +-i, beta = +-1, +-i
@@ -68,23 +68,28 @@ AXPBYV(PRECISION_CHAR, void)
     size_t avl = n;
     while (avl) {
         size_t vl = VSETVL(PREC, LMUL)(avl);
-        RVV_TYPE_F(PREC, LMUL) xvec_real, xvec_imag, yvec_real, yvec_imag, temp_real, temp_imag;
+        RVV_TYPE_F_X2(PREC, LMUL) xvec, yvec;
 
         if (incx == 1)
-            VLSEG2_V_F(PREC, LMUL)( &xvec_real, &xvec_imag, (BASE_DT*) x, vl);
+            xvec = VLSEG2_V_F(PREC, LMUL)( (BASE_DT*) x, vl);
         else
-            VLSSEG2_V_F(PREC, LMUL)(&xvec_real, &xvec_imag, (BASE_DT*) x, 2*FLT_SIZE*incx, vl);
-        
+            xvec = VLSSEG2_V_F(PREC, LMUL)( (BASE_DT*) x, 2*FLT_SIZE*incx, vl);
+
         if (incy == 1)
-            VLSEG2_V_F(PREC, LMUL)( &yvec_real, &yvec_imag, (BASE_DT*) y, vl);
+            yvec = VLSEG2_V_F(PREC, LMUL)( (BASE_DT*) y, vl);
         else
-            VLSSEG2_V_F(PREC, LMUL)(&yvec_real, &yvec_imag, (BASE_DT*) y, 2*FLT_SIZE*incy, vl);
-        
+            yvec = VLSSEG2_V_F(PREC, LMUL)( (BASE_DT*) y, 2*FLT_SIZE*incy, vl);
+
+        RVV_TYPE_F(PREC, LMUL) xvec_real = RVV_GET_REAL(PREC, LMUL, xvec);
+        RVV_TYPE_F(PREC, LMUL) xvec_imag = RVV_GET_IMAG(PREC, LMUL, xvec);
+        RVV_TYPE_F(PREC, LMUL) yvec_real = RVV_GET_REAL(PREC, LMUL, yvec);
+        RVV_TYPE_F(PREC, LMUL) yvec_imag = RVV_GET_IMAG(PREC, LMUL, yvec);
+
         // Computed as:
         // y.real = beta.real * y.real - beta.imag * y.imag + alpha.real * x.real - alpha.imag * conj(x.imag)
         // y.imag = beta.real * y.imag + beta.imag * y.real + alpha.imag * x.real + alpha.real * conj(x.imag)
-        temp_real = VFMUL_VF(PREC, LMUL)  (yvec_real, beta->real, vl);
-        temp_imag = VFMUL_VF(PREC, LMUL)  (yvec_imag, beta->real, vl);
+        RVV_TYPE_F(PREC, LMUL) temp_real = VFMUL_VF(PREC, LMUL)  (yvec_real, beta->real, vl);
+        RVV_TYPE_F(PREC, LMUL) temp_imag = VFMUL_VF(PREC, LMUL)  (yvec_imag, beta->real, vl);
         temp_real = VFNMSAC_VF(PREC, LMUL)(temp_real, beta->imag, yvec_imag, vl);
         temp_imag = VFMACC_VF(PREC, LMUL) (temp_imag, beta->imag, yvec_real, vl);
         yvec_real = VFMACC_VF(PREC, LMUL) (temp_real, alpha->real, xvec_real, vl);
@@ -97,11 +102,14 @@ AXPBYV(PRECISION_CHAR, void)
             yvec_imag = VFNMSAC_VF(PREC, LMUL)(yvec_imag, alpha->real, xvec_imag, vl);
         }
 
+        RVV_SET_REAL(PREC, LMUL, yvec, yvec_real);
+        RVV_SET_IMAG(PREC, LMUL, yvec, yvec_imag);
+
         if (incy == 1)
-            VSSEG2_V_F(PREC, LMUL)( (BASE_DT*) y, yvec_real, yvec_imag, vl);
+            VSSEG2_V_F(PREC, LMUL)( (BASE_DT*) y, yvec, vl);
         else
-            VSSSEG2_V_F(PREC, LMUL)((BASE_DT*) y, 2*FLT_SIZE*incy, yvec_real, yvec_imag, vl);
-        
+            VSSSEG2_V_F(PREC, LMUL)((BASE_DT*) y, 2*FLT_SIZE*incy, yvec, vl);
+
         x += vl*incx;
         y += vl*incy;
         avl -= vl;

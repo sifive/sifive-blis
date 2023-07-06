@@ -54,23 +54,30 @@ DOTAXPYV(PRECISION_CHAR, void)
 
     while (avl) {
         size_t vl = VSETVL(PREC, LMUL)(avl);
-        RVV_TYPE_F(PREC, LMUL) xvec_real, xvec_imag, yvec_real, yvec_imag, zvec_real, zvec_imag;
+        RVV_TYPE_F_X2(PREC, LMUL) xvec, yvec, zvec;
 
         // Loads
         if (incx == 1)
-            VLSEG2_V_F(PREC, LMUL)( &xvec_real, &xvec_imag, (BASE_DT*) x, vl);
+            xvec = VLSEG2_V_F(PREC, LMUL)( (BASE_DT*) x, vl);
         else
-            VLSSEG2_V_F(PREC, LMUL)(&xvec_real, &xvec_imag, (BASE_DT*) x, 2*FLT_SIZE*incx, vl);
-        
+            xvec = VLSSEG2_V_F(PREC, LMUL)( (BASE_DT*) x, 2*FLT_SIZE*incx, vl);
+
         if (incy == 1)
-            VLSEG2_V_F(PREC, LMUL)( &yvec_real, &yvec_imag, (BASE_DT*) y, vl);
+            yvec = VLSEG2_V_F(PREC, LMUL)( (BASE_DT*) y, vl);
         else
-            VLSSEG2_V_F(PREC, LMUL)(&yvec_real, &yvec_imag, (BASE_DT*) y, 2*FLT_SIZE*incy, vl);
-        
+            yvec = VLSSEG2_V_F(PREC, LMUL)( (BASE_DT*) y, 2*FLT_SIZE*incy, vl);
+
         if (incz == 1)
-            VLSEG2_V_F(PREC, LMUL)( &zvec_real, &zvec_imag, (BASE_DT*) z, vl);
+            zvec = VLSEG2_V_F(PREC, LMUL)( (BASE_DT*) z, vl);
         else
-            VLSSEG2_V_F(PREC, LMUL)(&zvec_real, &zvec_imag, (BASE_DT*) z, 2*FLT_SIZE*incz, vl);
+            zvec = VLSSEG2_V_F(PREC, LMUL)( (BASE_DT*) z, 2*FLT_SIZE*incz, vl);
+
+        RVV_TYPE_F(PREC, LMUL) xvec_real = RVV_GET_REAL(PREC, LMUL, xvec);
+        RVV_TYPE_F(PREC, LMUL) xvec_imag = RVV_GET_IMAG(PREC, LMUL, xvec);
+        RVV_TYPE_F(PREC, LMUL) yvec_real = RVV_GET_REAL(PREC, LMUL, yvec);
+        RVV_TYPE_F(PREC, LMUL) yvec_imag = RVV_GET_IMAG(PREC, LMUL, yvec);
+        RVV_TYPE_F(PREC, LMUL) zvec_real = RVV_GET_REAL(PREC, LMUL, zvec);
+        RVV_TYPE_F(PREC, LMUL) zvec_imag = RVV_GET_IMAG(PREC, LMUL, zvec);
 
         // z := z + alpha * conjx(x)
         zvec_real = VFMACC_VF(PREC, LMUL)( zvec_real, alpha->real, xvec_real, vl);
@@ -82,7 +89,7 @@ DOTAXPYV(PRECISION_CHAR, void)
             zvec_real = VFMACC_VF(PREC, LMUL)( zvec_real, alpha->imag, xvec_imag, vl);
             zvec_imag = VFNMSAC_VF(PREC, LMUL)(zvec_imag, alpha->real, xvec_imag, vl);
         }
-        
+
         // rho := conjxt(x)^T * conjy(y)
         // We accumulate the current term of the dot product as (a*c-b*d) + (a*d+b*c)*i,
         // conjugating when necessary
@@ -114,13 +121,16 @@ DOTAXPYV(PRECISION_CHAR, void)
             acc_imag = VFMACC_VV_TU(PREC, LMUL)( acc_imag, xvec_imag, yvec_real, vl);
         else
             acc_imag = VFNMSAC_VV_TU(PREC, LMUL)( acc_imag, xvec_imag, yvec_real, vl);
-        
+
+        RVV_SET_REAL(PREC, LMUL, zvec, zvec_real);
+        RVV_SET_IMAG(PREC, LMUL, zvec, zvec_imag);
+
         // Stores
         if (incz == 1)
-            VSSEG2_V_F(PREC, LMUL)( (BASE_DT*) z, zvec_real, zvec_imag, vl);
+            VSSEG2_V_F(PREC, LMUL)( (BASE_DT*) z, zvec, vl);
         else
-            VSSSEG2_V_F(PREC, LMUL)((BASE_DT*) z, 2*FLT_SIZE*incz, zvec_real, zvec_imag, vl);
-        
+            VSSSEG2_V_F(PREC, LMUL)((BASE_DT*) z, 2*FLT_SIZE*incz, zvec, vl);
+
         x += vl*incx;
         y += vl*incy;
         z += vl*incz;

@@ -40,7 +40,7 @@ SCALV(PRECISION_CHAR, void)
     // Computes x = conjalpha(alpha) * x
     const DATATYPE* restrict alpha = alpha_;
     DATATYPE* restrict x = x_;
-    
+
     if (n <= 0 || (alpha->real == 1 && alpha->imag == 0)) return;
 
     if (alpha->real == 0 && alpha->imag==0){
@@ -51,13 +51,16 @@ SCALV(PRECISION_CHAR, void)
     size_t avl = n;
     while (avl) {
         size_t vl = VSETVL(PREC, LMUL)(avl);
-        RVV_TYPE_F(PREC, LMUL) xvec_real, xvec_imag;
+        RVV_TYPE_F_X2(PREC, LMUL) xvec;
 
         if (incx == 1)
-            VLSEG2_V_F(PREC, LMUL)( &xvec_real, &xvec_imag, (BASE_DT*) x, vl);
+            xvec = VLSEG2_V_F(PREC, LMUL)( (BASE_DT*) x, vl);
         else
-            VLSSEG2_V_F(PREC, LMUL)(&xvec_real, &xvec_imag, (BASE_DT*) x, 2*FLT_SIZE*incx, vl);
-        
+            xvec = VLSSEG2_V_F(PREC, LMUL)( (BASE_DT*) x, 2*FLT_SIZE*incx, vl);
+
+        RVV_TYPE_F(PREC, LMUL) xvec_real = RVV_GET_REAL(PREC, LMUL, xvec);
+        RVV_TYPE_F(PREC, LMUL) xvec_imag = RVV_GET_IMAG(PREC, LMUL, xvec);
+
         RVV_TYPE_F(PREC, LMUL) temp_real = VFMUL_VF(PREC, LMUL)(xvec_real, alpha->real, vl);
         RVV_TYPE_F(PREC, LMUL) temp_imag = VFMUL_VF(PREC, LMUL)(xvec_imag, alpha->real, vl);
         if (conjalpha == BLIS_NO_CONJUGATE) {
@@ -67,13 +70,17 @@ SCALV(PRECISION_CHAR, void)
             temp_real = VFMACC_VF(PREC, LMUL) (temp_real, alpha->imag, xvec_imag, vl);
             temp_imag = VFNMSAC_VF(PREC, LMUL)(temp_imag, alpha->imag, xvec_real, vl);
         }
-        
+
+        RVV_TYPE_F_X2(PREC, LMUL) temp;
+        RVV_SET_REAL(PREC, LMUL, temp, temp_real);
+        RVV_SET_IMAG(PREC, LMUL, temp, temp_imag);
+#pragma GCC diagnostic ignored "-Wuninitialized"
 
         if (incx == 1)
-            VSSEG2_V_F(PREC, LMUL)( (BASE_DT*) x, temp_real, temp_imag, vl);
+            VSSEG2_V_F(PREC, LMUL)( (BASE_DT*) x, temp, vl);
         else
-            VSSSEG2_V_F(PREC, LMUL)((BASE_DT*) x, 2*FLT_SIZE*incx, temp_real, temp_imag, vl);
-        
+            VSSSEG2_V_F(PREC, LMUL)((BASE_DT*) x, 2*FLT_SIZE*incx, temp, vl);
+
         x += vl*incx;
         avl -= vl;
     }
